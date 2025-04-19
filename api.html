@@ -32,7 +32,7 @@
 
 <div class="container">
     <h2>VersionBase Public API (Direct Database Access)</h2>
-    <p>Fetch the current version string for any game via a direct request to the Firebase Realtime Database.</p>
+    <p>Fetch the current version string for any game via a direct request to the Firebase Realtime Database. <strong style="color: red;">Note: Data can be modified by anyone via the manager page.</strong></p>
     <h3>API Endpoint</h3>
     <p>Make an HTTP GET request to:</p>
     <pre><code id="apiUrlStructure">https://starthed3v-default-rtdb.firebaseio.com/games/<GAME_ID>/currentVersion.json</code><button class="copy-btn" onclick="copyToClipboard('apiUrlStructure', this)">Copy Structure</button></pre>
@@ -43,12 +43,11 @@
      <ul>
         <li><strong>Success:</strong> Status <code>200 OK</code>. Body: Version string (JSON encoded). Ex: <code>"1.2.0"</code></li>
         <li><strong>Not Found:</strong> Status <code>200 OK</code>. Body: <code>null</code>.</li>
-        <li><strong>Permission Error:</strong> Status <code>401/403</code>.</li>
     </ul>
     <h3>Roblox Luau Example (`HttpService`)</h3>
     <pre><code>
 local HttpService = game:GetService("HttpService")
-local GAME_ID = "YOUR_GAME_ID_HERE" -- Replace
+local GAME_ID = "YOUR_GAME_ID_HERE"
 local PROJECT_ID = "starthed3v"
 local API_URL = string.format("https://%s-default-rtdb.firebaseio.com/games/%s/currentVersion.json", PROJECT_ID, GAME_ID)
 local success, result = pcall(function() return HttpService:GetAsync(API_URL) end)
@@ -66,7 +65,7 @@ else warn("VersionBase: API request returned empty response for Game ID:", GAME_
     <button id="checkVersionBtn">Check Version</button>
     <div id="result" class="hidden" role="alert"></div>
     <hr>
-    <p style="text-align: center;"><a href="index.html">Back to VersionBase Manager</a></p>
+    <p style="text-align: center;"><a href="index.html">Back to Simple Manager</a></p>
 </div>
 <script>
     const gameIdInput = document.getElementById('apiGameId');
