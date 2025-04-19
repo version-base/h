@@ -33,71 +33,53 @@
 <div class="container">
     <h2>VersionBase Public API (Direct Database Access)</h2>
     <p>Fetch the current version string for any game via a direct request to the Firebase Realtime Database.</p>
-
     <h3>API Endpoint</h3>
     <p>Make an HTTP GET request to:</p>
     <pre><code id="apiUrlStructure">https://starthed3v-default-rtdb.firebaseio.com/games/<GAME_ID>/currentVersion.json</code><button class="copy-btn" onclick="copyToClipboard('apiUrlStructure', this)">Copy Structure</button></pre>
     <p>Replace <code><GAME_ID></code> with the numeric Roblox Game ID.</p>
-
     <h3>Example: Game ID 123456789</h3>
     <pre><code id="apiUrlExample">https://starthed3v-default-rtdb.firebaseio.com/games/123456789/currentVersion.json</code><button class="copy-btn" onclick="copyToClipboard('apiUrlExample', this)">Copy URL</button></pre>
-
     <h3>Expected Responses</h3>
      <ul>
         <li><strong>Success:</strong> Status <code>200 OK</code>. Body: Version string (JSON encoded). Ex: <code>"1.2.0"</code></li>
         <li><strong>Not Found:</strong> Status <code>200 OK</code>. Body: <code>null</code>.</li>
         <li><strong>Permission Error:</strong> Status <code>401/403</code>.</li>
     </ul>
-
     <h3>Roblox Luau Example (`HttpService`)</h3>
     <pre><code>
 local HttpService = game:GetService("HttpService")
 local GAME_ID = "YOUR_GAME_ID_HERE" -- Replace
 local PROJECT_ID = "starthed3v"
 local API_URL = string.format("https://%s-default-rtdb.firebaseio.com/games/%s/currentVersion.json", PROJECT_ID, GAME_ID)
-
 local success, result = pcall(function() return HttpService:GetAsync(API_URL) end)
-
 if success and result then
     local versionData = HttpService:JSONDecode(result)
-    if versionData then
-        print("VersionBase Current Version:", versionData)
-    else
-        warn("VersionBase: Game ID", GAME_ID, "not found or no version set (returned null).")
-    end
-elseif not success then
-    warn("VersionBase: Failed to fetch version -", result)
-else
-    warn("VersionBase: API request returned empty response for Game ID:", GAME_ID)
-end
+    if versionData then print("VersionBase Current Version:", versionData)
+    else warn("VersionBase: Game ID", GAME_ID, "not found (returned null).") end
+elseif not success then warn("VersionBase: Failed to fetch version -", result)
+else warn("VersionBase: API request returned empty response for Game ID:", GAME_ID) end
     </code></pre>
-
     <hr>
-
     <h3>Live API Tester</h3>
     <p>Enter a numeric Game ID to test the endpoint:</p>
     <input type="text" id="apiGameId" inputmode="numeric" pattern="[0-9]+" placeholder="Enter Numeric Game ID" required>
     <button id="checkVersionBtn">Check Version</button>
     <div id="result" class="hidden" role="alert"></div>
-
     <hr>
     <p style="text-align: center;"><a href="index.html">Back to VersionBase Manager</a></p>
 </div>
-
 <script>
     const gameIdInput = document.getElementById('apiGameId');
     const checkBtn = document.getElementById('checkVersionBtn');
     const resultDiv = document.getElementById('result');
     const projectId = 'starthed3v';
-
     checkBtn.addEventListener('click', async () => {
         const gameId = gameIdInput.value.trim();
         resultDiv.textContent = 'Sending request...'; resultDiv.className = 'info'; resultDiv.classList.remove('hidden'); checkBtn.disabled = true;
         if (!/^\d+$/.test(gameId)) { resultDiv.textContent = 'Invalid: Game ID must be numeric.'; resultDiv.className = 'error'; checkBtn.disabled = false; return; }
         const url = `https://${projectId}-default-rtdb.firebaseio.com/games/${gameId}/currentVersion.json`;
         try {
-            const response = await fetch(url);
-            const responseText = await response.text();
+            const response = await fetch(url); const responseText = await response.text();
             if (response.ok) {
                  try {
                      const data = JSON.parse(responseText);
@@ -108,7 +90,6 @@ end
         } catch (error) { resultDiv.textContent = `❌ Network Error: ${error.message}.`; resultDiv.className = 'error'; }
         finally { checkBtn.disabled = false; }
     });
-
     function copyToClipboard(elementId, buttonElement) {
         const codeElement = document.getElementById(elementId); const textToCopy = codeElement.textContent || codeElement.innerText;
         navigator.clipboard.writeText(textToCopy).then(() => {
