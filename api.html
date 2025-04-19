@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VersionBase - Public API</title>
+     <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; padding: 20px; background-color: #f8f9fa; color: #212529;}
+        .container { background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 800px; margin: 30px auto; }
+        h2, h3 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        h2 { text-align: center; }
+        code { background-color: #e9ecef; padding: 3px 6px; border-radius: 4px; font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color: #c7254e;}
+        pre { background-color: #e9ecef; padding: 15px; border-radius: 4px; overflow-x: auto; border: 1px solid #ced4da; font-size: 0.9em; position: relative; line-height: 1.4;}
+        a { color: #007bff; text-decoration: none;}
+        a:hover { text-decoration: underline; }
+        input[type="text"] { padding: 11px; margin-right: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; width: 280px; box-sizing: border-box;}
+        input:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); }
+        button { background-color: #17a2b8; color: white; padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; transition: background-color 0.2s ease; vertical-align: middle;}
+        button:hover:not(:disabled) { background-color: #117a8b; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7;}
+        #result { margin-top: 20px; font-weight: 500; padding: 15px; border-radius: 4px; border: 1px solid transparent; word-wrap: break-word;}
+        .error { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb;}
+        .success { color: #155724; background-color: #d4edda; border-color: #c3e6cb;}
+        .info { color: #0c5460; background-color: #d1ecf1; border-color: #bee5eb;}
+        hr { border: 0; border-top: 1px solid #dee2e6; margin: 30px 0; }
+        .copy-btn { position: absolute; top: 8px; right: 8px; background-color: #6c757d; color: white; border: none; padding: 4px 8px; font-size: 0.8em; border-radius: 3px; cursor: pointer; opacity: 0.8; }
+        .copy-btn:hover { background-color: #5a6268; opacity: 1;}
+        .copy-btn:active { background-color: #545b62; }
+     </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>VersionBase Public API (Direct Database Access)</h2>
+    <p>Fetch the current version string for any game via a direct request to the Firebase Realtime Database.</p>
+
+    <h3>API Endpoint</h3>
+    <p>Make an HTTP GET request to:</p>
+    <pre><code id="apiUrlStructure">https://starthed3v-default-rtdb.firebaseio.com/games/<GAME_ID>/currentVersion.json</code><button class="copy-btn" onclick="copyToClipboard('apiUrlStructure', this)">Copy Structure</button></pre>
+    <p>Replace <code><GAME_ID></code> with the numeric Roblox Game ID.</p>
+
+    <h3>Example: Game ID 123456789</h3>
+    <pre><code id="apiUrlExample">https://starthed3v-default-rtdb.firebaseio.com/games/123456789/currentVersion.json</code><button class="copy-btn" onclick="copyToClipboard('apiUrlExample', this)">Copy URL</button></pre>
+
+    <h3>Expected Responses</h3>
+     <ul>
+        <li><strong>Success:</strong> Status <code>200 OK</code>. Body: Version string (JSON encoded). Ex: <code>"1.2.0"</code></li>
+        <li><strong>Not Found:</strong> Status <code>200 OK</code>. Body: <code>null</code>.</li>
+        <li><strong>Permission Error:</strong> Status <code>401/403</code>.</li>
+    </ul>
+
+    <h3>Roblox Luau Example (`HttpService`)</h3>
+    <pre><code>
+local HttpService = game:GetService("HttpService")
+local GAME_ID = "YOUR_GAME_ID_HERE" -- Replace
+local PROJECT_ID = "starthed3v"
+local API_URL = string.format("https://%s-default-rtdb.firebaseio.com/games/%s/currentVersion.json", PROJECT_ID, GAME_ID)
+
+local success, result = pcall(function() return HttpService:GetAsync(API_URL) end)
+
+if success and result then
+    local versionData = HttpService:JSONDecode(result)
+    if versionData then
+        print("VersionBase Current Version:", versionData)
+    else
+        warn("VersionBase: Game ID", GAME_ID, "not found or no version set (returned null).")
+    end
+elseif not success then
+    warn("VersionBase: Failed to fetch version -", result)
+else
+    warn("VersionBase: API request returned empty response for Game ID:", GAME_ID)
+end
+    </code></pre>
+
+    <hr>
+
+    <h3>Live API Tester</h3>
+    <p>Enter a numeric Game ID to test the endpoint:</p>
+    <input type="text" id="apiGameId" inputmode="numeric" pattern="[0-9]+" placeholder="Enter Numeric Game ID" required>
+    <button id="checkVersionBtn">Check Version</button>
+    <div id="result" class="hidden" role="alert"></div>
+
+    <hr>
+    <p style="text-align: center;"><a href="index.html">Back to VersionBase Manager</a></p>
+</div>
+
+<script>
+    const gameIdInput = document.getElementById('apiGameId');
+    const checkBtn = document.getElementById('checkVersionBtn');
+    const resultDiv = document.getElementById('result');
+    const projectId = 'starthed3v';
+
+    checkBtn.addEventListener('click', async () => {
+        const gameId = gameIdInput.value.trim();
+        resultDiv.textContent = 'Sending request...'; resultDiv.className = 'info'; resultDiv.classList.remove('hidden'); checkBtn.disabled = true;
+        if (!/^\d+$/.test(gameId)) { resultDiv.textContent = 'Invalid: Game ID must be numeric.'; resultDiv.className = 'error'; checkBtn.disabled = false; return; }
+        const url = `https://${projectId}-default-rtdb.firebaseio.com/games/${gameId}/currentVersion.json`;
+        try {
+            const response = await fetch(url);
+            const responseText = await response.text();
+            if (response.ok) {
+                 try {
+                     const data = JSON.parse(responseText);
+                     if (data !== null) { resultDiv.textContent = `✅ Success (200 OK)! Version: ${JSON.stringify(data)}`; resultDiv.className = 'success'; }
+                     else { resultDiv.textContent = `ℹ️ Not Found (200 OK). Game ID not registered? Response: null`; resultDiv.className = 'info'; }
+                 } catch(parseError) { resultDiv.textContent = `⚠️ Response Error! Status ${response.status}. Invalid JSON? ${responseText}`; resultDiv.className = 'error'; }
+            } else { resultDiv.textContent = `❌ Error! Status: ${response.status} ${response.statusText}. Response: ${responseText || '(No body)'}`; resultDiv.className = 'error'; }
+        } catch (error) { resultDiv.textContent = `❌ Network Error: ${error.message}.`; resultDiv.className = 'error'; }
+        finally { checkBtn.disabled = false; }
+    });
+
+    function copyToClipboard(elementId, buttonElement) {
+        const codeElement = document.getElementById(elementId); const textToCopy = codeElement.textContent || codeElement.innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const originalText = buttonElement.textContent; buttonElement.textContent = 'Copied!'; buttonElement.disabled = true;
+            setTimeout(() => { buttonElement.textContent = originalText; buttonElement.disabled = false; }, 1500);
+        }).catch(err => { console.error('Copy failed: ', err); alert('Copy failed.'); });
+    }
+</script>
+
+</body>
+</html>
