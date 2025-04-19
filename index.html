@@ -100,7 +100,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-analytics.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-analytics.js"; // Keep import if needed later
   import {
       getAuth,
       createUserWithEmailAndPassword,
@@ -127,13 +127,12 @@
     databaseURL: "https://starthed3v-default-rtdb.firebaseio.com",
     projectId: "starthed3v",
     storageBucket: "starthed3v.appspot.com",
-    messagingSenderId: "869533398876",
-    appId: "1:869533398876:web:b7df79fb6eaeb5b481b399",
-    measurementId: "G-862TWDHWCL"
+    messagingSenderId: "869533398876"
+    // appId and measurementId intentionally removed as requested
   };
 
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
+  // const analytics = getAnalytics(app); // Analytics removed as appId/measurementId are missing
   const auth = getAuth(app);
   const db = getDatabase(app);
   const gamesRef = ref(db, 'games');
@@ -200,6 +199,7 @@
       hideStatus(authStatus);
   }
   function getAuthErrorMessage(error) {
+      if (error && error.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') { return 'Configuration Error: Invalid API Key.'; }
         switch (error.code) {
             case 'auth/invalid-email': return 'Invalid email format.';
             case 'auth/user-disabled': return 'Account disabled.';
@@ -210,6 +210,7 @@
             case 'auth/weak-password': return 'Password too weak (min 6 chars).';
             case 'auth/requires-recent-login': return 'Requires recent login. Log out/in.';
             case 'auth/too-many-requests': return 'Too many attempts. Try later.';
+            case 'auth/missing-identifier': return 'Internal Setup Error: Missing App ID in config?'; // Guessing based on potential new error
             default: return `Auth error (${error.code}).`;
         }
     }
@@ -247,7 +248,7 @@
       if (password.length < 6) { showStatus(authStatus, 'Password too weak.', 'error'); return; }
       setLoading(signupButton, true, 'Sign Up');
       try { await createUserWithEmailAndPassword(auth, email, password); clearAuthInputs(); }
-      catch (error) { console.error("Signup Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error'); setLoading(signupButton, false); }
+      catch (error) { console.error("Signup Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error', 10000); setLoading(signupButton, false); }
   });
 
   loginButton.addEventListener('click', async () => {
@@ -256,7 +257,7 @@
       if (!email || !password) { showStatus(authStatus, 'Enter email/password.', 'error'); return; }
       setLoading(loginButton, true, 'Login');
       try { await signInWithEmailAndPassword(auth, email, password); clearAuthInputs(); }
-      catch (error) { console.error("Login Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error'); setLoading(loginButton, false); }
+      catch (error) { console.error("Login Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error', 10000); setLoading(loginButton, false); }
   });
 
   logoutButton.addEventListener('click', async () => {
@@ -270,7 +271,7 @@
        if (!email) { showStatus(authStatus, 'Enter email first.', 'info'); return; }
        setLoading(forgotPasswordButton, true, 'Forgot Password?');
        try { await sendPasswordResetEmail(auth, email); showStatus(authStatus, `Password reset email sent to ${email}.`, 'success', 10000); }
-       catch (error) { console.error("PW Reset Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error'); }
+       catch (error) { console.error("PW Reset Error:", error); showStatus(authStatus, getAuthErrorMessage(error), 'error', 10000); }
        finally { setLoading(forgotPasswordButton, false); }
    });
 
@@ -302,7 +303,7 @@
             } else { ownedGamesListDiv.innerHTML = '<p>No games registered yet.</p>'; ownedGamesCountSpan.textContent = '0'; }
         } catch (error) {
              console.error("Error fetching owned games:", error);
-             ownedGamesListDiv.innerHTML = `<p class="error">Error loading games: ${error.message}. Ensure DB rules allow querying games by ownerUid.</p>`;
+             ownedGamesListDiv.innerHTML = `<p class="error">Error loading games: ${error.message}. Check DB rules allow querying by ownerUid.</p>`;
              ownedGamesCountSpan.textContent = '?';
              showStatus(registerStatus, `Error loading games: ${error.message}`, 'error');
         }
@@ -318,11 +319,11 @@
         try {
             const { committed } = await runTransaction(specificGameRef, (currentData) => {
                 if (currentData === null) { return { ownerUid: user.uid, email: user.email, currentVersion: initialVersion }; }
-                else { return; }
+                else { return undefined; }
             });
             if (committed) { showStatus(registerStatus, `Success! Game ID ${gameId} registered.`, 'success'); clearRegisterForm(); fetchOwnedGames(user.uid); }
             else { showStatus(registerStatus, `Game ID ${gameId} already registered.`, 'error'); }
-        } catch (error) { console.error("Reg Error:", error); showStatus(registerStatus, `Registration failed: ${error.message}.`, 'error'); }
+        } catch (error) { console.error("Reg Error:", error); showStatus(registerStatus, `Registration failed: ${getAuthErrorMessage(error)}`, 'error', 10000); }
         finally { setLoading(registerButton, false); }
     });
 
@@ -338,13 +339,12 @@
         try {
             const ownerSnapshot = await get(ownerRef);
             if (!ownerSnapshot.exists() || ownerSnapshot.val() !== user.uid) {
-                showStatus(updateStatus, `Cannot update: Game ID ${gameId} not found or not owned.`, 'error');
-                setLoading(updateButton, false); return;
+                showStatus(updateStatus, `Cannot update: Game ID ${gameId} not found or not owned.`, 'error'); setLoading(updateButton, false); return;
             }
             await set(versionRef, newVersion);
             showStatus(updateStatus, `Success! Game ID ${gameId} updated to "${newVersion}".`, 'success');
             clearUpdateForm(); fetchOwnedGames(user.uid);
-        } catch (error) { console.error("Update Error:", error); showStatus(updateStatus, `Update failed: ${error.message}.`, 'error'); }
+        } catch (error) { console.error("Update Error:", error); showStatus(updateStatus, `Update failed: ${getAuthErrorMessage(error)}`, 'error', 10000); }
         finally { setLoading(updateButton, false); }
     });
 
